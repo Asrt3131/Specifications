@@ -1,10 +1,13 @@
 import streamlit as st
 import streamlit.components.v1 as components
+import base64
+import os
+import json
 
 # تنظیمات صفحه Streamlit
 st.set_page_config(page_title="Ali Obaidi | Portfolio", page_icon="🌌", layout="wide")
 
-# استایل‌های مخفی کردن منوی پیش‌فرض استریم‌لیت برای اینکه سایت خودمان تمام صفحه باشد
+# استایل‌های مخفی کردن منوی پیش‌فرض استریم‌لیت
 st.markdown("""
     <style>
         #MainMenu {visibility: hidden;}
@@ -27,9 +30,28 @@ projects = [
     {"title": "Data Dashboard", "live": "https://data-dashboard-srt343-z8hpwmaamvsucqn5jc5a4c.streamlit.app/", "github": "https://github.com/Asrt3131/data-dashboard-srt343.git"}
 ]
 
-# ساخت قالب HTML به صورت داینامیک برای تزریق در Streamlit
+# تابع برای تبدیل عکس‌های لوکال به Base64 تا در Iframe نمایش داده شوند
+def get_base64_image(image_path):
+    if os.path.exists(image_path):
+        with open(image_path, "rb") as img_file:
+            return "data:image/jpeg;base64," + base64.b64encode(img_file.read()).decode()
+    return ""
+
+# خواندن عکس‌ها از پوشه app
+image_paths = [f"app/img{i}.jpg" for i in range(1, 7)]
+base64_images = [get_base64_image(path) for path in image_paths]
+# حذف عکس‌هایی که وجود ندارند (اگر عکسی آپلود نشده باشد)
+base64_images = [img for img in base64_images if img != ""]
+
+# اگر هیچ عکسی پیدا نشد، از یک عکس پیش‌فرض استفاده کن تا سایت خراب نشود
+if not base64_images:
+    base64_images = ["https://ui-avatars.com/api/?name=Ali+Obaidi&background=0D8ABC&color=fff&size=200"]
+
+# تبدیل لیست عکس‌ها به فرمت JSON برای ارسال به جاوااسکریپت
+images_json = json.dumps(base64_images)
+
+# ساخت قالب HTML
 def get_html_content():
-    # تولید کدهای HTML کارت‌های پروژه
     projects_html = ""
     for p in projects:
         projects_html += f"""
@@ -73,31 +95,6 @@ def get_html_content():
                 z-index: -1; background: radial-gradient(circle at center, #11111a 0%, #050510 100%);
             }}
             
-            /* صفحه انتخاب زبان */
-            .lang-overlay {{
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(5,5,16,0.95); display: flex; flex-direction: column; 
-                align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(10px);
-            }}
-            .lang-overlay h1 {{
-                font-size: 2rem; margin-bottom: 40px; text-align: center;
-                background: linear-gradient(90deg, var(--cyan), var(--pink));
-                -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-                animation: pulse 2s infinite alternate; font-family: 'Orbitron', sans-serif;
-            }}
-            .lang-btns {{ display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }}
-            .lang-btn {{
-                padding: 15px 40px; font-size: 1.2rem; font-weight: bold;
-                background: rgba(255,255,255,0.05); border: 2px solid var(--cyan); color: var(--cyan);
-                border-radius: 50px; cursor: pointer; text-decoration: none;
-                transition: 0.3s; box-shadow: 0 0 10px rgba(0,243,255,0.2);
-            }}
-            .lang-btn:hover {{
-                background: var(--cyan); color: var(--bg-color);
-                box-shadow: 0 0 20px var(--cyan); transform: scale(1.05);
-            }}
-
-            /* محتوای اصلی */
             .container {{ max-width: 1200px; margin: 0 auto; padding: 40px 20px; }}
             .profile-header {{
                 display: flex; align-items: center; gap: 40px;
@@ -189,8 +186,8 @@ def get_html_content():
         <div class="container">
             <header class="profile-header">
                 <div class="profile-img-container">
-                    <!-- نام عکس‌ها باید دقیقا img1.jpg تا img6.jpg باشد -->
-                    <img src="app/static/img1.jpg" id="myProfilePic" alt="Ali Obaidi" class="profile-img" onerror="this.src='https://ui-avatars.com/api/?name=Ali+Obaidi&background=0D8ABC&color=fff&size=200'">
+                    <!-- عکس اول به صورت پیش فرض لود می‌شود -->
+                    <img src="" id="myProfilePic" alt="Ali Obaidi" class="profile-img">
                 </div>
                 
                 <div class="profile-info">
@@ -219,6 +216,16 @@ def get_html_content():
         </div>
 
         <script>
+            // دریافت لیست عکس‌های تبدیل شده به Base64 از پایتون
+            const myPhotos = {images_json};
+            let currentPhotoIndex = 0;
+            const profilePic = document.getElementById('myProfilePic');
+
+            // تنظیم عکس اولیه
+            if (myPhotos.length > 0) {{
+                profilePic.src = myPhotos[0];
+            }}
+
             // انیمیشن ستاره‌ها
             const canvas = document.getElementById('canvas-bg');
             const ctx = canvas.getContext('2d');
@@ -244,11 +251,8 @@ def get_html_content():
             window.addEventListener('resize', initCanvas);
             initCanvas(); animateStars();
 
-            // اسلایدر عکس پروفایل
-            const myPhotos = ['app/static/img1.jpg', 'app/static/img2.jpg', 'app/static/img3.jpg', 'app/static/img4.jpg', 'app/static/img5.jpg', 'app/static/img6.jpg'];
-            let currentPhotoIndex = 0;
-            const profilePic = document.getElementById('myProfilePic');
-            if(profilePic) {{
+            // اسلایدر عکس پروفایل (تغییر هر ۵ ثانیه)
+            if(myPhotos.length > 1) {{
                 setInterval(() => {{
                     profilePic.style.opacity = '0';
                     setTimeout(() => {{
