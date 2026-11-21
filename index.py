@@ -192,7 +192,7 @@ def get_html_content():
                 
                 <div class="profile-info">
                     <h1>علی عبیدی</h1>
-                    <p>مهندس هوش مصنوعی و توسعه‌دهنده وب</p>
+                    <p>  وب هوش مصنوعی و توسعه‌دهنده /p>
                     <div class="badges">
                         <span class="badge">متولد ۲۰۰۶</span>
                         <span class="badge">بیش از ۸ پروژه</span>
